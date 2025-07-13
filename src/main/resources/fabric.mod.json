@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "polymultiblock",
+  "version": "${version}",
+  "name": "PolyMultiblock",
+  "description": "Easy to use multiblocks for Polymer",
+  "authors": [],
+  "contact": {},
+  "license": "unlicense",
+  "icon": "assets/polymultiblock/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      "dev.feintha.polymultiblock.PolyMultiblockMod"
+    ]
+  },
+  "mixins": [
+    "polymultiblock.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  },
+  "accessWidener": "pmb.accesswidener"
+}
