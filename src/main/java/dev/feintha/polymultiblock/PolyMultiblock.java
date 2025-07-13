@@ -9,10 +9,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.world.ServerLightingProvider;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
-import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.state.property.Property;
 import net.minecraft.util.ActionResult;
@@ -81,12 +79,11 @@ public abstract class PolyMultiblock extends Block implements PolymerBlock {
     }
 
     /// Places the pattern as instances of the pattern's actual BlockStates
-    public boolean placePatternAt(ServerWorld world, BlockPos centerPos, @Nullable ItemPlacementContext unused, @Nullable Direction facing) {
+    public void placePatternAt(ServerWorld world, BlockPos centerPos, @Nullable ItemPlacementContext unused, @Nullable Direction facing) {
         this.getPattern().copyFacing(facing == null ? Direction.SOUTH : facing).iterateBlocksFrom(centerPos, world::setBlockState);
-        return true;
     }
     /// Places the pattern as instances of the current PolyMultiblock's internal state
-    public boolean placeThisAt(ServerWorld world, BlockPos centerPos, @Nullable ItemPlacementContext context, @Nullable Direction facing) {
+    public void placeThisAt(ServerWorld world, BlockPos centerPos, @Nullable ItemPlacementContext context, @Nullable Direction facing) {
         var p = getPattern();
         this.getPattern().copyRotated(facing == null ? 0 : facing.getHorizontalQuarterTurns()).iterateBlocks((s, _s)->{
 //            System.out.println(getDefaultState());
@@ -99,22 +96,16 @@ public abstract class PolyMultiblock extends Block implements PolymerBlock {
             world.setBlockState(centerPos.add(s),state);
             processMultiblock(world, centerPos.add(s.getX(), s.getY(), s.getZ()), state, s.getX(), s.getY(), s.getZ());
         });
-        return true;
     }
 
     public ActionResult interactMultiblock(ItemStack stack, BlockState state, ServerWorld world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit){return ActionResult.PASS;}
     public ActionResult interactCenter(ItemStack stack, BlockState state, ServerWorld world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit){return ActionResult.PASS;}
     @Override
     protected final ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-
-        Direction d = state.contains(Properties.HORIZONTAL_FACING) ? state.get(Properties.HORIZONTAL_FACING) : null;
-        int r = d != null ? d.getHorizontalQuarterTurns() : 0;
         final ActionResult[] result = {ActionResult.PASS};
         var ps = new BlockPos(getCenter(pos, state));
         var pv = ps.toCenterPos();
-        ((ServerWorld)world).spawnParticles(ParticleTypes.BUBBLE_POP, pv.x, pv.y, pv.z, 1, 0, 0,0,0);
-        ((ServerWorld)world).spawnParticles(ParticleTypes.FLASH, pv.x, pv.y, pv.z, 1, 0, 0,0,0);
-        getPattern().iterateBlocksFrom(r,ps, (_p,unused)->{
+        getPattern().iterateBlocksFrom(getCWQuarterTurns(pos, state),ps, (_p,unused)->{
             var p = _p;
 //            System.out.println();
             var s = world.getBlockState(_p);
@@ -130,26 +121,24 @@ public abstract class PolyMultiblock extends Block implements PolymerBlock {
     }
     @Override
     public BlockState onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
-        Direction d = state.contains(Properties.HORIZONTAL_FACING) ? state.get(Properties.HORIZONTAL_FACING) : null;
-        int r = d != null ? d.getHorizontalQuarterTurns() : 0;
-        getPattern().iterateBlocksFrom(r,new BlockPos(getCenter(pos, state)), (p,s)->{
+        getPattern().iterateBlocksFrom(getCWQuarterTurns(pos, state),new BlockPos(getCenter(pos, state)), (p,s)->{
             world.breakBlock(p, false, player);
 //            System.out.println(p);
         });
         return super.onBreak(world, pos, state, player);
     }
-
+    public int getCWQuarterTurns(BlockPos pos, BlockState state) {
+        Direction d = state.contains(Properties.HORIZONTAL_FACING) ? state.get(Properties.HORIZONTAL_FACING) : null;
+        if (d == null && state.contains(Properties.HORIZONTAL_AXIS)) {
+            d = state.get(Properties.HORIZONTAL_AXIS).getPositiveDirection();
+        } else if (d == null && state.contains(Properties.AXIS)) {
+            d = state.get(Properties.AXIS).getPositiveDirection();
+        }
+        return d != null ? d.getHorizontalQuarterTurns() : 0;
+    }
     @Override
     public @Nullable BlockState getPlacementState(ItemPlacementContext ctx) {
-        Direction facing = null;
-        if (this.getDefaultState().contains(Properties.HORIZONTAL_FACING)) {
-            facing = ctx.getHorizontalPlayerFacing();
-        }
-        System.out.printf("Facing (PS) %s%n",facing);
-        if (facing != null) {
-            System.out.printf("Turns (PS) %d%n", facing.getHorizontalQuarterTurns());
-        }
-        placeThisAt((ServerWorld) ctx.getWorld(), ctx.getBlockPos(), ctx, facing);
+        placeThisAt((ServerWorld) ctx.getWorld(), ctx.getBlockPos(), ctx, ctx.getHorizontalPlayerFacing());
         return super.getPlacementState(ctx);
     }
 

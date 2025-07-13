@@ -2,9 +2,9 @@
 /.gradle/
 /build/
 /build/classes/java/main/
-/build/
-/.idea/
-/.gradle/
+build/
+.idea/
+.gradle/
 /gradle/
 /run/
 /gradlew
