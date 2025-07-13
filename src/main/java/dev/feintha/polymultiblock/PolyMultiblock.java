@@ -156,6 +156,7 @@ public abstract class PolyMultiblock extends Block implements PolymerBlock {
     @Override @MustBeInvokedByOverriders
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
         _pattern = createPattern();
+        if (_pattern.centerPos == null) throw new RuntimeException("Pattern Center cannot be null!");
         super.appendProperties(getPattern().appendProperties(builder));
     }
     @Override
